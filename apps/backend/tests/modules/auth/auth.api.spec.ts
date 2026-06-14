@@ -35,6 +35,10 @@ const registerEndpoint = joinPath([
   AuthApiPath.SIGN_UP
 ]);
 
+type DatabaseUser = UserSignUpResponseDto & {
+  password: string;
+};
+
 describe(`${authApiPath} routes`, () => {
   const { getApp, getKnex } = buildApp();
   const { select } = getCrudHandlers(getKnex);
@@ -140,16 +144,24 @@ describe(`${authApiPath} routes`, () => {
         })
       );
 
-      const savedDatabaseUser = await select({
+      const savedDatabaseUser = (await select<DatabaseUser, DatabaseUser>({
         condition: { id: response.json<UserSignUpResponseDto>().id },
         limit: KNEX_SELECT_ONE_RECORD,
         table: DatabaseTableName.USERS
-      });
+      })) as DatabaseUser;
 
       expect(savedDatabaseUser).toEqual(
         expect.objectContaining({
           [UserPayloadKey.EMAIL]: validTestUser[UserPayloadKey.EMAIL]
         })
+      );
+      expect(savedDatabaseUser).toEqual(
+        expect.objectContaining({
+          [UserPayloadKey.PASSWORD]: expect.any(String)
+        })
+      );
+      expect(savedDatabaseUser[UserPayloadKey.PASSWORD]).not.toBe(
+        validTestUser[UserPayloadKey.PASSWORD]
       );
     });
   });
