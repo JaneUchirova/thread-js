@@ -1,1 +1,1 @@
-export { ValidationError } from '@thread-js/shared';
+export { HTTPError, ValidationError } from '@thread-js/shared';

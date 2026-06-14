@@ -1,6 +1,10 @@
 import { AbstractRepository } from '~/libs/modules/database/database.js';
 
-import { type User as TUser, type UserRepository } from './libs/types/types.js';
+import {
+  type User as TUser,
+  type UserRepository,
+  type UserWithPassword
+} from './libs/types/types.js';
 import { type User as UserModel } from './user.model.js';
 
 type Constructor = Record<'userModel', typeof UserModel>;
@@ -18,6 +22,18 @@ class User
       .query()
       .modify('withoutPassword')
       .findOne({ email });
+
+    return user ?? null;
+  }
+
+  public async getByEmailWithPassword(
+    email: string
+  ): Promise<null | UserWithPassword> {
+    const user = await this.model
+      .query()
+      .findOne({ email })
+      .castTo<undefined | UserWithPassword>()
+      .execute();
 
     return user ?? null;
   }

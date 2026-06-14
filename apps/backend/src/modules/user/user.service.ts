@@ -2,7 +2,11 @@ import { randomBytes, scrypt } from 'node:crypto';
 import { promisify } from 'node:util';
 
 import { type UserSignUpRequestDto } from '../auth/libs/types/types.js';
-import { type User as TUser, type UserService } from './libs/types/types.js';
+import {
+  type User as TUser,
+  type UserService,
+  type UserWithPassword
+} from './libs/types/types.js';
 import { type User as UserRepository } from './user.repository.js';
 
 type Constructor = Record<'userRepository', UserRepository>;
@@ -28,6 +32,13 @@ class User implements UserService {
 
     return await this.#userRepository.create(userToCreate);
   }
+
+  public async getByEmailWithPassword(
+    email: string
+  ): Promise<null | UserWithPassword> {
+    return await this.#userRepository.getByEmailWithPassword(email);
+  }
+
   async #hashPassword(password: string): Promise<string> {
     const salt = randomBytes(PASSWORD_HASH_SALT_LENGTH).toString('hex');
     const hash = (await scryptAsync(

@@ -8,6 +8,8 @@ import { HTTPCode, HTTPMethod } from '~/libs/modules/http/http.js';
 import { joinPath } from '~/libs/modules/path/path.js';
 import {
   AuthApiPath,
+  type UserSignInRequestDto,
+  type UserSignInResponseDto,
   type UserSignUpRequestDto,
   type UserSignUpResponseDto
 } from '~/modules/auth/auth.js';
@@ -33,6 +35,13 @@ const registerEndpoint = joinPath([
   API_V1_VERSION_PREFIX,
   APIPath.AUTH,
   AuthApiPath.SIGN_UP
+]);
+
+const loginEndpoint = joinPath([
+  config.ENV.APP.API_PATH,
+  API_V1_VERSION_PREFIX,
+  APIPath.AUTH,
+  AuthApiPath.SIGN_IN
 ]);
 
 type DatabaseUser = UserSignUpResponseDto & {
@@ -162,6 +171,76 @@ describe(`${authApiPath} routes`, () => {
       );
       expect(savedDatabaseUser[UserPayloadKey.PASSWORD]).not.toBe(
         validTestUser[UserPayloadKey.PASSWORD]
+      );
+    });
+  });
+
+  describe(`${loginEndpoint} (${HTTPMethod.POST}) endpoint`, () => {
+    const app = getApp();
+
+    it(`should return ${HTTPCode.OK} and sign in a user`, async () => {
+      const [, validTestUser] = TEST_USERS_CREDENTIALS as [
+        UserSignUpRequestDto,
+        UserSignUpRequestDto
+      ];
+
+      const signUpResponse = await app
+        .inject()
+        .post(registerEndpoint)
+        .body(validTestUser);
+
+      const response = await app
+        .inject()
+        .post(loginEndpoint)
+        .body(validTestUser);
+
+      const responseBody = response.json<UserSignInResponseDto>();
+
+      expect(response.statusCode).toBe(HTTPCode.OK);
+      expect(responseBody.user).toEqual(
+        expect.objectContaining({
+          id: signUpResponse.json<UserSignUpResponseDto>().id,
+          [UserPayloadKey.EMAIL]: validTestUser[UserPayloadKey.EMAIL]
+        })
+      );
+      expect(responseBody).toEqual(
+        expect.objectContaining({
+          token: `token from ${JSON.stringify(responseBody.user)}`
+        })
+      );
+    });
+
+    it(`should return ${HTTPCode.NOT_FOUND} when user was not found`, async () => {
+      const [validTestUser] = TEST_USERS_CREDENTIALS as [UserSignInRequestDto];
+
+      const response = await app
+        .inject()
+        .post(loginEndpoint)
+        .body({
+          ...validTestUser,
+          [UserPayloadKey.EMAIL]: faker.internet.email()
+        });
+
+      expect(response.statusCode).toBe(HTTPCode.NOT_FOUND);
+      expect(response.json<Record<'message', string>>().message).toBe(
+        'User not found'
+      );
+    });
+
+    it(`should return ${HTTPCode.UNPROCESSED_ENTITY} when password is invalid`, async () => {
+      const [validTestUser] = TEST_USERS_CREDENTIALS as [UserSignInRequestDto];
+
+      const response = await app
+        .inject()
+        .post(loginEndpoint)
+        .body({
+          ...validTestUser,
+          [UserPayloadKey.PASSWORD]: faker.internet.password()
+        });
+
+      expect(response.statusCode).toBe(HTTPCode.UNPROCESSED_ENTITY);
+      expect(response.json<Record<'message', string>>().message).toBe(
+        'Login failed. Invalid Email or Password'
       );
     });
   });
