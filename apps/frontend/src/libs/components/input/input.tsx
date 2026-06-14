@@ -1,13 +1,15 @@
 import { ErrorMessage } from '@hookform/error-message';
 import clsx from 'clsx';
-import { type ReactElement } from 'react';
 import {
   type Control,
   type FieldPath,
-  type FieldValues
+  type FieldValues,
+  useController
 } from 'react-hook-form';
 
-import { useController } from '~/libs/hooks/hooks.js';
+import { Icon } from '~/libs/components/components.js';
+import { type IconName } from '~/libs/enums/enums.js';
+import { type ValueOf } from '~/libs/types/types.js';
 
 import styles from './styles.module.scss';
 
@@ -16,6 +18,7 @@ type InputProperties<T extends FieldValues> = {
   control: Control<T>;
   disabled?: boolean;
   errors?: object;
+  iconName?: ValueOf<typeof IconName>;
   name: FieldPath<T>;
   placeholder: string;
   rows?: number;
@@ -27,11 +30,12 @@ const Input = <T extends FieldValues>({
   control,
   disabled,
   errors = {},
+  iconName,
   name,
   placeholder,
   rows,
   type = 'text'
-}: InputProperties<T>): ReactElement => {
+}: InputProperties<T>): React.ReactElement => {
   const { field } = useController<T>({ control, name });
   const isTextarea = Boolean(rows);
 
@@ -47,13 +51,22 @@ const Input = <T extends FieldValues>({
             rows={rows}
           />
         ) : (
-          <input
-            {...field}
-            className={clsx(styles['input'], className)}
-            disabled={disabled}
-            placeholder={placeholder}
-            type={type}
-          />
+          <>
+            {iconName && (
+              <Icon className={styles['icon']} iconName={iconName} />
+            )}
+            <input
+              {...field}
+              className={clsx(
+                styles['input'],
+                iconName && styles['inputWithIcon'],
+                className
+              )}
+              disabled={disabled}
+              placeholder={placeholder}
+              type={type}
+            />
+          </>
         )}
       </div>
       <span className={styles['errorWrapper']}>

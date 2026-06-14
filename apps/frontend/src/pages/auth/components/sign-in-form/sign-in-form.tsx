@@ -1,5 +1,5 @@
 import { Button, Input, NavLink } from '~/libs/components/components.js';
-import { AppRoute, ButtonColor } from '~/libs/enums/enums.js';
+import { AppRoute, ButtonColor, IconName } from '~/libs/enums/enums.js';
 import { useAppForm } from '~/libs/hooks/hooks.js';
 import { UserPayloadKey } from '~/modules/user/user.js';
 
@@ -19,6 +19,7 @@ const SignInForm: React.FC = () => {
           <Input
             control={control}
             errors={errors}
+            iconName={IconName.EMAIL}
             name={UserPayloadKey.EMAIL}
             placeholder="Email"
             type="email"
@@ -26,6 +27,7 @@ const SignInForm: React.FC = () => {
           <Input
             control={control}
             errors={errors}
+            iconName={IconName.PASSWORD}
             name={UserPayloadKey.PASSWORD}
             placeholder="Password"
             type="password"

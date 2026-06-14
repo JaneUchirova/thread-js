@@ -1,5 +1,10 @@
 import { Button, Input, NavLink } from '~/libs/components/components.js';
-import { AppRoute, ButtonColor, DataStatus } from '~/libs/enums/enums.js';
+import {
+  AppRoute,
+  ButtonColor,
+  DataStatus,
+  IconName
+} from '~/libs/enums/enums.js';
 import { useAppForm, useAppSelector } from '~/libs/hooks/hooks.js';
 import { type UserSignUpRequestDto } from '~/modules/auth/auth.js';
 import { signUp as signUpValidationSchema } from '~/modules/auth/libs/validation-schemas/validation-schemas.js';
@@ -37,6 +42,7 @@ const SignUpForm: React.FC<Properties> = ({ onSubmit }) => {
           <Input
             control={control}
             errors={errors}
+            iconName={IconName.EMAIL}
             name={UserPayloadKey.EMAIL}
             placeholder="Email"
             type="email"
@@ -44,6 +50,7 @@ const SignUpForm: React.FC<Properties> = ({ onSubmit }) => {
           <Input
             control={control}
             errors={errors}
+            iconName={IconName.PASSWORD}
             name={UserPayloadKey.PASSWORD}
             placeholder="Password"
             type="password"
