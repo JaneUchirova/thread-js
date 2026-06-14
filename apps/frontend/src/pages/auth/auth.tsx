@@ -5,7 +5,11 @@ import {
   useCallback,
   useLocation
 } from '~/libs/hooks/hooks.js';
-import { authActions, type UserSignUpRequestDto } from '~/modules/auth/auth.js';
+import {
+  authActions,
+  type UserSignInRequestDto,
+  type UserSignUpRequestDto
+} from '~/modules/auth/auth.js';
 
 import { SignInForm, SignUpForm } from './components/components.js';
 import styles from './styles.module.scss';
@@ -13,6 +17,13 @@ import styles from './styles.module.scss';
 const Auth: React.FC = () => {
   const dispatch = useAppDispatch();
   const { pathname } = useLocation();
+
+  const handleSignInSubmit = useCallback(
+    (payload: UserSignInRequestDto): void => {
+      void dispatch(authActions.signIn(payload));
+    },
+    [dispatch]
+  );
 
   const handleSignUpSubmit = useCallback(
     (payload: UserSignUpRequestDto): void => {
@@ -24,7 +35,7 @@ const Auth: React.FC = () => {
   const getScreen = (path: string): null | React.JSX.Element => {
     switch (path) {
       case AppRoute.SIGN_IN: {
-        return <SignInForm />;
+        return <SignInForm onSubmit={handleSignInSubmit} />;
       }
 
       case AppRoute.SIGN_UP: {

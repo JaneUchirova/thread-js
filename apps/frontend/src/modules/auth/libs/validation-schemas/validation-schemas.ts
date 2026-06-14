@@ -1,1 +1,1 @@
-export { signUp } from '@thread-js/shared';
+export { signIn, signUp } from '@thread-js/shared';
