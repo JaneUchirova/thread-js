@@ -112,6 +112,20 @@ class Config implements ConfigModule {
           env: 'DB_USERNAME',
           format: String
         }
+      },
+      JWT: {
+        EXPIRATION_TIME: {
+          default: '1d',
+          doc: 'JWT expiration time',
+          env: 'JWT_EXPIRATION_TIME',
+          format: String
+        },
+        SECRET: {
+          default: 'super-secret-key',
+          doc: 'JWT secret',
+          env: 'JWT_SECRET',
+          format: String
+        }
       }
     });
   }
