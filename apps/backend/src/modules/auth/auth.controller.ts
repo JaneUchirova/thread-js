@@ -1,4 +1,5 @@
 import { type APIPath } from '~/libs/enums/enums.js';
+import { HTTPError } from '~/libs/exceptions/exceptions.js';
 import {
   Controller,
   type ControllerAPIHandler,
@@ -13,6 +14,7 @@ import { AuthApiPath } from './libs/enums/enums.js';
 import {
   type AuthController,
   type AuthService,
+  type User,
   type UserSignInRequestDto,
   type UserSignInResponseDto,
   type UserSignUpRequestDto,
@@ -23,6 +25,9 @@ import {
   signUpValidationSchema
 } from './libs/validation-schemas/validation-schemas.js';
 
+const AUTHORIZATION_ERROR_MESSAGE =
+  'You do not have the necessary authorization to access this resource. Please log in.';
+
 type Constructor = {
   apiPath: ValueOf<typeof APIPath>;
   authService: AuthService;
@@ -31,6 +36,26 @@ type Constructor = {
 
 class Auth extends Controller implements AuthController {
   #authService: AuthService;
+
+  public getCurrentUser = async (
+    options: ControllerAPIHandlerOptions<{
+      user: {
+        id: number;
+      };
+    }>
+  ): Promise<ControllerAPIHandlerResponse<User>> => {
+    if (!options.user) {
+      throw new HTTPError({
+        message: AUTHORIZATION_ERROR_MESSAGE,
+        status: HTTPCode.UNAUTHORIZED
+      });
+    }
+
+    return {
+      payload: await this.#authService.getCurrentUser(options.user.id),
+      status: HTTPCode.OK
+    };
+  };
 
   public login = async (
     options: ControllerAPIHandlerOptions<{
@@ -57,6 +82,12 @@ class Auth extends Controller implements AuthController {
   public constructor({ apiPath, authService, logger }: Constructor) {
     super({ apiPath, logger });
     this.#authService = authService;
+
+    this.addRoute({
+      handler: this.getCurrentUser as ControllerAPIHandler,
+      method: HTTPMethod.GET,
+      url: AuthApiPath.CURRENT_USER
+    });
 
     this.addRoute({
       handler: this.login as ControllerAPIHandler,

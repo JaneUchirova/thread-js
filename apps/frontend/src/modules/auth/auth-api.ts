@@ -5,6 +5,7 @@ import { type HttpApi } from '../http/http.js';
 import { AuthApiPath } from './libs/enums/enums.js';
 import {
   type AuthApi,
+  type User,
   type UserSignUpRequestDto,
   type UserSignUpResponseDto
 } from './libs/types/types.js';
@@ -22,6 +23,13 @@ class Auth implements AuthApi {
   public constructor({ apiPath, httpApi }: Constructor) {
     this.#apiPath = apiPath;
     this.#httpApi = httpApi;
+  }
+
+  public getCurrentUser(): Promise<User> {
+    return this.#httpApi.load(
+      `${this.#apiPath}${APIPath.AUTH}${AuthApiPath.CURRENT_USER}`,
+      {}
+    );
   }
 
   public signUp(payload: UserSignUpRequestDto): Promise<UserSignUpResponseDto> {

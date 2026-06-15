@@ -1,4 +1,5 @@
 import { AbstractRepository } from '~/libs/modules/database/database.js';
+import { type UserSignUpRequestDto } from '~/modules/auth/auth.js';
 
 import {
   type User as TUser,
@@ -17,11 +18,33 @@ class User
     super(userModel);
   }
 
+  public async create(
+    payload: UserSignUpRequestDto
+  ): Promise<UserWithPassword> {
+    return await this.model
+      .query()
+      .insert(payload)
+      .returning('*')
+      .castTo<UserWithPassword>()
+      .execute();
+  }
+
   public async getByEmail(email: string): Promise<null | TUser> {
     const user = await this.model
       .query()
       .modify('withoutPassword')
       .findOne({ email });
+
+    return user ?? null;
+  }
+
+  public override async getById(id: number): Promise<null | TUser> {
+    const user = await this.model
+      .query()
+      .modify('withoutPassword')
+      .findById(id)
+      .castTo<TUser | undefined>()
+      .execute();
 
     return user ?? null;
   }

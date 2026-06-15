@@ -46,6 +46,13 @@ const loginEndpoint = joinPath([
   AuthApiPath.SIGN_IN
 ]);
 
+const currentUserEndpoint = joinPath([
+  config.ENV.APP.API_PATH,
+  API_V1_VERSION_PREFIX,
+  APIPath.AUTH,
+  AuthApiPath.CURRENT_USER
+]);
+
 const protectedEndpoint = joinPath([
   config.ENV.APP.API_PATH,
   API_V1_VERSION_PREFIX,
@@ -343,6 +350,32 @@ describe(`${authApiPath} routes`, () => {
       expect(response.json<Record<'userId', number>>()).toEqual({
         userId: user.id
       });
+    });
+  });
+
+  describe(`${currentUserEndpoint} (${HTTPMethod.GET}) endpoint`, () => {
+    const app = getApp();
+
+    it(`should return ${HTTPCode.OK} and current user by token`, async () => {
+      const validTestUser: UserSignUpRequestDto = {
+        [UserPayloadKey.EMAIL]: faker.internet.email(),
+        [UserPayloadKey.PASSWORD]: faker.internet.password()
+      };
+      const signUpResponse = await app
+        .inject()
+        .post(registerEndpoint)
+        .body(validTestUser);
+      const { token, user } = signUpResponse.json<UserSignUpResponseDto>();
+
+      const response = await app
+        .inject()
+        .get(currentUserEndpoint)
+        .headers({
+          [HttpHeader.AUTHORIZATION]: `Bearer ${token}`
+        });
+
+      expect(response.statusCode).toBe(HTTPCode.OK);
+      expect(response.json()).toEqual(user);
     });
   });
 });
