@@ -14,6 +14,14 @@ type Constructor = {
   logger: LoggerModule;
 };
 
+type RequestWithUser = Parameters<
+  ServerApplicationRouteParameters['handler']
+>[0] & {
+  user?: {
+    id: number;
+  };
+};
+
 class Controller implements ControllerModule {
   #apiPath: string;
 
@@ -40,14 +48,16 @@ class Controller implements ControllerModule {
   }
 
   private mapRequest(
-    request: Parameters<ControllerRouteParameters['handler']>[0]
+    request: Parameters<ServerApplicationRouteParameters['handler']>[0]
   ): ControllerAPIHandlerOptions {
     const { body, params, query } = request;
+    const { user } = request as RequestWithUser;
 
     return {
       body,
       params,
-      query
+      query,
+      ...(user ? { user } : {})
     };
   }
 

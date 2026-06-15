@@ -30,13 +30,20 @@ class User implements UserService {
       password: passwordHash
     };
 
-    return await this.#userRepository.create(userToCreate);
+    const { password: _password, ...user } =
+      await this.#userRepository.create(userToCreate);
+
+    return user;
   }
 
   public async getByEmailWithPassword(
     email: string
   ): Promise<null | UserWithPassword> {
     return await this.#userRepository.getByEmailWithPassword(email);
+  }
+
+  public async getById(id: number): Promise<null | TUser> {
+    return await this.#userRepository.getById(id);
   }
 
   async #hashPassword(password: string): Promise<string> {

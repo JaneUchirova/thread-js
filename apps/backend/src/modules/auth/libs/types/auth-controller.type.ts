@@ -4,6 +4,7 @@ import {
 } from '~/libs/modules/controller/controller.js';
 
 import {
+  type User,
   type UserSignInRequestDto,
   type UserSignInResponseDto,
   type UserSignUpRequestDto,
@@ -11,6 +12,13 @@ import {
 } from './types.js';
 
 type AuthController = {
+  getCurrentUser: (
+    options: ControllerAPIHandlerOptions<{
+      user: {
+        id: number;
+      };
+    }>
+  ) => Promise<ControllerAPIHandlerResponse<User>>;
   login: (
     options: ControllerAPIHandlerOptions<{
       body: UserSignInRequestDto;

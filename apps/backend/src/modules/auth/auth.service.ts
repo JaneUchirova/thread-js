@@ -9,6 +9,7 @@ import { HTTPCode } from '~/libs/modules/http/http.js';
 import { type UserService } from '../user/user.js';
 import {
   type AuthService,
+  type User,
   type UserSignInRequestDto,
   type UserSignInResponseDto,
   type UserSignUpRequestDto,
@@ -31,6 +32,19 @@ class Auth implements AuthService {
   #config: ConfigModule;
 
   #userService: UserService;
+
+  public getCurrentUser = async (userId: number): Promise<User> => {
+    const user = await this.#userService.getById(userId);
+
+    if (!user) {
+      throw new HTTPError({
+        message: USER_NOT_FOUND_MESSAGE,
+        status: HTTPCode.NOT_FOUND
+      });
+    }
+
+    return user;
+  };
 
   public login = async (
     userRequestDto: UserSignInRequestDto
