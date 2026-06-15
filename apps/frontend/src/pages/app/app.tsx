@@ -1,4 +1,7 @@
-import { RouterProvider } from '~/libs/components/components.js';
+import {
+  ProtectedRoute,
+  RouterProvider
+} from '~/libs/components/components.js';
 import { AppRoute } from '~/libs/enums/enums.js';
 
 import { Auth } from '../auth/auth.js';
@@ -11,15 +14,36 @@ const App: React.FC = () => {
         {
           children: [
             {
-              element: <Root />,
+              element: (
+                <ProtectedRoute
+                  redirectPath={AppRoute.SIGN_IN}
+                  shouldBeAuthorized
+                >
+                  <Root />
+                </ProtectedRoute>
+              ),
               path: AppRoute.ROOT
             },
             {
-              element: <Auth />,
+              element: (
+                <ProtectedRoute
+                  redirectPath={AppRoute.ROOT}
+                  shouldBeAuthorized={false}
+                >
+                  <Auth />
+                </ProtectedRoute>
+              ),
               path: AppRoute.SIGN_IN
             },
             {
-              element: <Auth />,
+              element: (
+                <ProtectedRoute
+                  redirectPath={AppRoute.ROOT}
+                  shouldBeAuthorized={false}
+                >
+                  <Auth />
+                </ProtectedRoute>
+              ),
               path: AppRoute.SIGN_UP
             }
           ],
