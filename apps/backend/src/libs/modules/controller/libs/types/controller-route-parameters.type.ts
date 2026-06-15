@@ -5,6 +5,7 @@ import { type ControllerAPIHandler } from './controller-api-handler.type.js';
 
 type ControllerRouteParameters = {
   handler: ControllerAPIHandler;
+  isPublic?: boolean;
   method: ValueOf<typeof HTTPMethod>;
   schema?: {
     body?: ValidationSchema;

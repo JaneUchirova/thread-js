@@ -8,19 +8,27 @@ import { database } from '~/libs/modules/database/database.js';
 import { logger } from '~/libs/modules/logger/logger.js';
 import {
   ServerApp,
-  serverAppApiV1
+  ServerAppApi,
+  serverAppApiV1,
+  type ServerApplicationRouteParameters
 } from '~/libs/modules/server-application/server-application.js';
 
 import { clearDatabase } from '../../../../database/database.js';
 
-type BuildApp = () => {
+type BuildApp = (options?: { routes?: ServerApplicationRouteParameters[] }) => {
   getApp: () => FastifyInstance;
   getKnex: () => Knex;
 };
 
-const buildApp: BuildApp = () => {
+const buildApp: BuildApp = options => {
   const serverApp = new ServerApp({
-    apis: [serverAppApiV1],
+    apis: [
+      serverAppApiV1,
+      new ServerAppApi({
+        routes: options?.routes ?? [],
+        version: 'v1'
+      })
+    ],
     config,
     database,
     logger,

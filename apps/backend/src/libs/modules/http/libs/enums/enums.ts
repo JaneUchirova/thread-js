@@ -1,1 +1,1 @@
-export { HTTPCode, HTTPMethod } from '@thread-js/shared';
+export { HTTPCode, HttpHeader, HTTPMethod } from '@thread-js/shared';

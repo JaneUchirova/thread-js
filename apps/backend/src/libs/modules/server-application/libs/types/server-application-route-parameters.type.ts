@@ -9,6 +9,9 @@ import { type HTTPMethod } from '~/libs/modules/http/http.js';
 import { type ValidationSchema, type ValueOf } from '~/libs/types/types.js';
 
 type ServerApplicationRouteParameters = {
+  config?: {
+    isPublic?: boolean;
+  };
   handler: <T extends RouteGenericInterface>(
     _request: FastifyRequest<T>,
     _reply: FastifyReply

@@ -52,10 +52,13 @@ class Controller implements ControllerModule {
   }
 
   public addRoute(options: ControllerRouteParameters): void {
-    const { handler, url } = options;
+    const { handler, isPublic, url } = options;
 
     this.#routes.push({
       ...options,
+      config: {
+        isPublic: Boolean(isPublic)
+      },
       handler: (request, reply) => this.mapHandler(handler, request, reply),
       url: joinPath([this.#apiPath, url])
     });
