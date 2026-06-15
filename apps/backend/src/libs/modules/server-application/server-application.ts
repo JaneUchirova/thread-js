@@ -33,4 +33,5 @@ const serverApp = new ServerApp({
 
 export { serverApp, serverAppApiV1 };
 export { type ServerApplicationRouteParameters } from './libs/types/types.js';
+export { ServerAppApi } from './server-app-api.js';
 export { ServerApp } from './server-app.js';

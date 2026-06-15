@@ -60,6 +60,7 @@ class Auth extends Controller implements AuthController {
 
     this.addRoute({
       handler: this.login as ControllerAPIHandler,
+      isPublic: true,
       method: HTTPMethod.POST,
       schema: {
         body: signInValidationSchema
@@ -69,6 +70,7 @@ class Auth extends Controller implements AuthController {
 
     this.addRoute({
       handler: this.register as ControllerAPIHandler,
+      isPublic: true,
       method: HTTPMethod.POST,
       schema: {
         body: signUpValidationSchema

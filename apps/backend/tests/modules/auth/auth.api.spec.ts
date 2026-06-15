@@ -5,8 +5,9 @@ import { jwtVerify } from 'jose';
 import { APIPath } from '~/libs/enums/enums.js';
 import { config } from '~/libs/modules/config/config.js';
 import { DatabaseTableName } from '~/libs/modules/database/database.js';
-import { HTTPCode, HTTPMethod } from '~/libs/modules/http/http.js';
+import { HTTPCode, HttpHeader, HTTPMethod } from '~/libs/modules/http/http.js';
 import { joinPath } from '~/libs/modules/path/path.js';
+import { type ServerApplicationRouteParameters } from '~/libs/modules/server-application/server-application.js';
 import {
   AuthApiPath,
   type UserSignInRequestDto,
@@ -45,6 +46,21 @@ const loginEndpoint = joinPath([
   AuthApiPath.SIGN_IN
 ]);
 
+const protectedEndpoint = joinPath([
+  config.ENV.APP.API_PATH,
+  API_V1_VERSION_PREFIX,
+  '/protected'
+]);
+
+type AuthenticatedRequest = Parameters<
+  ServerApplicationRouteParameters['handler']
+  // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+>[0] & {
+  user?: {
+    id: number;
+  };
+};
+
 type DatabaseUser = UserSignUpResponseDto['user'] & {
   password: string;
 };
@@ -67,8 +83,22 @@ const verifyToken = async (token: string): Promise<TokenPayload> => {
   return payload as TokenPayload;
 };
 
+const protectedRoute: ServerApplicationRouteParameters = {
+  handler: async (request, reply) => {
+    const authenticatedRequest = request as AuthenticatedRequest;
+
+    return await reply.status(HTTPCode.OK).send({
+      userId: authenticatedRequest.user?.id
+    });
+  },
+  method: HTTPMethod.GET,
+  url: '/protected'
+};
+
 describe(`${authApiPath} routes`, () => {
-  const { getApp, getKnex } = buildApp();
+  const { getApp, getKnex } = buildApp({
+    routes: [protectedRoute]
+  });
   const { select } = getCrudHandlers(getKnex);
 
   describe(`${registerEndpoint} (${HTTPMethod.POST}) endpoint`, () => {
@@ -276,6 +306,43 @@ describe(`${authApiPath} routes`, () => {
       expect(response.json<Record<'message', string>>().message).toBe(
         'Login failed. Invalid Email or Password'
       );
+    });
+  });
+
+  describe('authorization plugin', () => {
+    const app = getApp();
+
+    it(`should return ${HTTPCode.UNAUTHORIZED} when authorization header is not provided`, async () => {
+      const response = await app.inject().get(protectedEndpoint);
+
+      expect(response.statusCode).toBe(HTTPCode.UNAUTHORIZED);
+      expect(response.json<Record<'message', string>>().message).toBe(
+        'You do not have the necessary authorization to access this resource. Please log in.'
+      );
+    });
+
+    it('should inject signed user identity into protected request', async () => {
+      const validTestUser: UserSignUpRequestDto = {
+        [UserPayloadKey.EMAIL]: faker.internet.email(),
+        [UserPayloadKey.PASSWORD]: faker.internet.password()
+      };
+      const signUpResponse = await app
+        .inject()
+        .post(registerEndpoint)
+        .body(validTestUser);
+      const { token, user } = signUpResponse.json<UserSignUpResponseDto>();
+
+      const response = await app
+        .inject()
+        .get(protectedEndpoint)
+        .headers({
+          [HttpHeader.AUTHORIZATION]: `Bearer ${token}`
+        });
+
+      expect(response.statusCode).toBe(HTTPCode.OK);
+      expect(response.json<Record<'userId', number>>()).toEqual({
+        userId: user.id
+      });
     });
   });
 });

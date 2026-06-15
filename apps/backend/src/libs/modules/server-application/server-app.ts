@@ -2,14 +2,20 @@ import fastifyStatic from '@fastify/static';
 import fastify, {
   type FastifyError,
   type FastifyInstance,
+  type FastifyRequest,
   type FastifyServerOptions
 } from 'fastify';
+import { jwtVerify } from 'jose';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ServerErrorType } from '~/libs/enums/enums.js';
-import { type ValidationError } from '~/libs/exceptions/exceptions.js';
+import {
+  HTTPError,
+  type ValidationError
+} from '~/libs/exceptions/exceptions.js';
 import { type ConfigModule } from '~/libs/modules/config/config.js';
+import { HTTPCode, HttpHeader } from '~/libs/modules/http/http.js';
 import { joinPath } from '~/libs/modules/path/path.js';
 import { type ValidationSchema } from '~/libs/types/types.js';
 
@@ -18,6 +24,12 @@ import { type LoggerModule } from '../logger/logger.js';
 import { getErrorInfo } from './libs/helpers/helpers.js';
 import { type ServerApi } from './libs/types/types.js';
 
+type AuthenticatedRequest = FastifyRequest & {
+  user?: {
+    id: number;
+  };
+};
+
 type Constructor = {
   apis: ServerApi[];
   config: ConfigModule;
@@ -25,6 +37,21 @@ type Constructor = {
   logger: LoggerModule;
   options: FastifyServerOptions;
 };
+
+type RouteConfig = {
+  isPublic?: boolean;
+};
+
+type TokenPayload = {
+  userId?: unknown;
+};
+
+const AUTHORIZATION_ERROR_MESSAGE =
+  'You do not have the necessary authorization to access this resource. Please log in.';
+const BEARER_TOKEN_PARTS_COUNT = 2;
+const BEARER_TOKEN_PREFIX = 'Bearer';
+const TOKEN_INDEX = 1;
+const textEncoder = new TextEncoder();
 
 class ServerApp {
   #apis: ServerApi[];
@@ -46,6 +73,43 @@ class ServerApp {
           abortEarly: false
         }) as R;
       };
+    });
+  };
+
+  #initAuthorizationPlugin = (): void => {
+    this.app.addHook('preHandler', async request => {
+      if (this.#isPublicRequest(request)) {
+        return;
+      }
+
+      const token = this.#getBearerToken(request);
+
+      if (!token) {
+        throw new HTTPError({
+          message: AUTHORIZATION_ERROR_MESSAGE,
+          status: HTTPCode.UNAUTHORIZED
+        });
+      }
+
+      try {
+        const { payload } = await jwtVerify(
+          token,
+          textEncoder.encode(this.#config.ENV.JWT.SECRET)
+        );
+        const { userId } = payload as TokenPayload;
+
+        if (typeof userId !== 'number') {
+          throw new TypeError('Invalid token payload.');
+        }
+
+        (request as AuthenticatedRequest).user = { id: userId };
+      } catch (error) {
+        throw new HTTPError({
+          cause: error,
+          message: AUTHORIZATION_ERROR_MESSAGE,
+          status: HTTPCode.UNAUTHORIZED
+        });
+      }
     });
   };
 
@@ -82,6 +146,7 @@ class ServerApp {
 
   public initialize = async (): Promise<typeof this> => {
     this.#initValidationCompiler();
+    this.#initAuthorizationPlugin();
     await this.#registerServe();
     this.#registerRoutes();
     this.#initErrorHandler();
@@ -151,6 +216,35 @@ class ServerApp {
 
   public get database(): DatabaseModule {
     return this.#database;
+  }
+
+  #getBearerToken(request: FastifyRequest): null | string {
+    const authorizationHeader = request.headers[HttpHeader.AUTHORIZATION];
+
+    if (!authorizationHeader || Array.isArray(authorizationHeader)) {
+      return null;
+    }
+
+    const authorizationHeaderParts = authorizationHeader.split(' ');
+    const [prefix, token] = authorizationHeaderParts;
+
+    if (
+      prefix !== BEARER_TOKEN_PREFIX ||
+      !token ||
+      authorizationHeaderParts.length !== BEARER_TOKEN_PARTS_COUNT
+    ) {
+      return null;
+    }
+
+    return authorizationHeaderParts[TOKEN_INDEX] ?? null;
+  }
+
+  #isPublicRequest(request: FastifyRequest): boolean {
+    const isApiRequest = request.url.startsWith(this.#config.ENV.APP.API_PATH);
+    const routeConfig = request.routeOptions.config as RouteConfig;
+    const isPublicRoute = Boolean(routeConfig.isPublic);
+
+    return !isApiRequest || isPublicRoute;
   }
 }
 
