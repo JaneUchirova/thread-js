@@ -8,7 +8,7 @@ import { signUp } from './actions.js';
 
 type State = {
   dataStatus: ValueOf<typeof DataStatus>;
-  user: null | UserSignUpResponseDto;
+  user: null | UserSignUpResponseDto['user'];
 };
 
 const initialState: State = {
@@ -23,7 +23,7 @@ const { actions, reducer } = createSlice({
         state.dataStatus = DataStatus.PENDING;
       })
       .addMatcher(isAnyOf(signUp.fulfilled), (state, action) => {
-        state.user = action.payload;
+        state.user = action.payload.user;
         state.dataStatus = DataStatus.FULFILLED;
       })
       .addMatcher(isAnyOf(signUp.rejected), state => {

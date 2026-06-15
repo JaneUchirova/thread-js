@@ -1,7 +1,9 @@
-import { scrypt, timingSafeEqual } from 'node:crypto';
+import { SignJWT } from 'jose';
+import { randomUUID, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
 import { HTTPError } from '~/libs/exceptions/exceptions.js';
+import { type ConfigModule } from '~/libs/modules/config/config.js';
 import { HTTPCode } from '~/libs/modules/http/http.js';
 
 import { type UserService } from '../user/user.js';
@@ -14,15 +16,20 @@ import {
 } from './libs/types/types.js';
 
 type Constructor = {
+  config: ConfigModule;
   userService: UserService;
 };
 
+const JWT_ALGORITHM = 'HS256';
 const HASH_SEPARATOR = ':';
 const LOGIN_FAILED_MESSAGE = 'Login failed. Invalid Email or Password';
 const USER_NOT_FOUND_MESSAGE = 'User not found';
 const scryptAsync = promisify(scrypt);
+const textEncoder = new TextEncoder();
 
 class Auth implements AuthService {
+  #config: ConfigModule;
+
   #userService: UserService;
 
   public login = async (
@@ -52,7 +59,7 @@ class Auth implements AuthService {
     }
 
     const { password: _password, ...userWithoutPassword } = user;
-    const token = `token from ${JSON.stringify(userWithoutPassword)}`;
+    const token = await this.#createToken(userWithoutPassword.id);
 
     return {
       token,
@@ -63,11 +70,27 @@ class Auth implements AuthService {
   public register = async (
     userRequestDto: UserSignUpRequestDto
   ): Promise<UserSignUpResponseDto> => {
-    return await this.#userService.create(userRequestDto);
+    const user = await this.#userService.create(userRequestDto);
+    const token = await this.#createToken(user.id);
+
+    return {
+      token,
+      user
+    };
   };
 
-  public constructor({ userService }: Constructor) {
+  public constructor({ config, userService }: Constructor) {
+    this.#config = config;
     this.#userService = userService;
+  }
+
+  async #createToken(userId: number): Promise<string> {
+    return await new SignJWT({ userId })
+      .setProtectedHeader({ alg: JWT_ALGORITHM })
+      .setJti(randomUUID())
+      .setIssuedAt()
+      .setExpirationTime(this.#config.ENV.JWT.EXPIRATION_TIME)
+      .sign(textEncoder.encode(this.#config.ENV.JWT.SECRET));
   }
 
   async #verifyPassword(

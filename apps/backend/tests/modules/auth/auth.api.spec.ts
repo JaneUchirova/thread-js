@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { describe, expect, it } from '@jest/globals';
+import { jwtVerify } from 'jose';
 
 import { APIPath } from '~/libs/enums/enums.js';
 import { config } from '~/libs/modules/config/config.js';
@@ -44,8 +45,26 @@ const loginEndpoint = joinPath([
   AuthApiPath.SIGN_IN
 ]);
 
-type DatabaseUser = UserSignUpResponseDto & {
+type DatabaseUser = UserSignUpResponseDto['user'] & {
   password: string;
+};
+
+type TokenPayload = {
+  exp: number;
+  iat: number;
+  userId: number;
+};
+
+const SECONDS_IN_ONE_DAY = 86_400;
+const textEncoder = new TextEncoder();
+
+const verifyToken = async (token: string): Promise<TokenPayload> => {
+  const { payload } = await jwtVerify(
+    token,
+    textEncoder.encode(config.ENV.JWT.SECRET)
+  );
+
+  return payload as TokenPayload;
 };
 
 describe(`${authApiPath} routes`, () => {
@@ -149,12 +168,24 @@ describe(`${authApiPath} routes`, () => {
       expect(response.statusCode).toBe(HTTPCode.CREATED);
       expect(response.json()).toEqual(
         expect.objectContaining({
-          [UserPayloadKey.EMAIL]: validTestUser[UserPayloadKey.EMAIL]
+          token: expect.any(String),
+          user: expect.objectContaining({
+            [UserPayloadKey.EMAIL]: validTestUser[UserPayloadKey.EMAIL]
+          })
         })
       );
+      const responseBody = response.json<UserSignUpResponseDto>();
+      const tokenPayload = await verifyToken(responseBody.token);
+
+      expect(tokenPayload).toEqual(
+        expect.objectContaining({
+          userId: responseBody.user.id
+        })
+      );
+      expect(tokenPayload.exp - tokenPayload.iat).toBe(SECONDS_IN_ONE_DAY);
 
       const savedDatabaseUser = (await select<DatabaseUser, DatabaseUser>({
-        condition: { id: response.json<UserSignUpResponseDto>().id },
+        condition: { id: responseBody.user.id },
         limit: KNEX_SELECT_ONE_RECORD,
         table: DatabaseTableName.USERS
       })) as DatabaseUser;
@@ -199,15 +230,18 @@ describe(`${authApiPath} routes`, () => {
       expect(response.statusCode).toBe(HTTPCode.OK);
       expect(responseBody.user).toEqual(
         expect.objectContaining({
-          id: signUpResponse.json<UserSignUpResponseDto>().id,
+          id: signUpResponse.json<UserSignUpResponseDto>().user.id,
           [UserPayloadKey.EMAIL]: validTestUser[UserPayloadKey.EMAIL]
         })
       );
-      expect(responseBody).toEqual(
+      const tokenPayload = await verifyToken(responseBody.token);
+
+      expect(tokenPayload).toEqual(
         expect.objectContaining({
-          token: `token from ${JSON.stringify(responseBody.user)}`
+          userId: responseBody.user.id
         })
       );
+      expect(tokenPayload.exp - tokenPayload.iat).toBe(SECONDS_IN_ONE_DAY);
     });
 
     it(`should return ${HTTPCode.NOT_FOUND} when user was not found`, async () => {
